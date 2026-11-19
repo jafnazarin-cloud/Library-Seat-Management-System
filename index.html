@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Seat Management System</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- আইকনের জন্য FontAwesome লিংক -->
+    <link rel="stylesheet" href="https://cloudflare.com">
+</head>
+<body>
+
+    <div class="glass-card">
+        <!-- ডার্ক মোড এবং থিম কন্ট্রোল বার -->
+        <div class="theme-control">
+            <button id="themeToggle" onclick="toggleTheme()"><i class="fa-solid fa-moon"></i> Dark Mode</button>
+        </div>
+
+        <div class="header-section">
+            <h2><i class="fa-solid fa-hotel title-icon"></i> Library Seat Management System</h2>
+            <p class="subtitle">রিয়েল-টাইম আসন বুকিং ও ব্যবস্থাপনা সিস্টেম</p>
+        </div>
+        
+        <!-- লাইভ ডিজিটাল ঘড়ি ও লাইব্রেরি আওয়ার্স -->
+        <div class="status-ribbon">
+            <div class="time-badge">
+                <i class="fa-regular fa-clock"></i> 08:00 AM - 05:00 PM
+            </div>
+            <div class="live-clock" id="liveClock">
+                Loading...
+            </div>
+        </div>
+
+        <!-- ডাইনামিক ফিল্টার অপশন (নতুন যুক্ত করা হয়েছে) -->
+        <div class="filter-container">
+            <button class="filter-btn active" id="filter-all" onclick="filterSeats('all')">সব আসন</button>
+            <button class="filter-btn" id="filter-free" onclick="filterSeats('free')">খালি আসন</button>
+            <button class="filter-btn" id="filter-booked" onclick="filterSeats('booked')">বুকড আসন</button>
+        </div>
+        
+        <!-- মডার্ন কাউন্টার ম্যাট্রিক্স -->
+        <div class="counter-matrix">
+            <div class="matrix-item total">
+                <span class="matrix-num" id="totalNum">10</span>
+                <span class="matrix-label">মোট আসন</span>
+            </div>
+            <div class="matrix-item booked">
+                <span class="matrix-num" id="bookedNum">0</span>
+                <span class="matrix-label">বুকড</span>
+            </div>
+            <div class="matrix-item free">
+                <span class="matrix-num" id="freeNum">10</span>
+                <span class="matrix-label">খালি আছে</span>
+            </div>
+        </div>
+        
+        <!-- ৩ডি সিট লেআউট গ্রিড -->
+        <div class="seat-grid">
+            <button id="seat-1" class="seat-btn" onclick="handleSeatClick(this)"><i class="fa-solid fa-chair"></i><span>Seat 1</span></button>
+            <button id="seat-2" class="seat-btn" onclick="handleSeatClick(this)"><i class="fa-solid fa-chair"></i><span>Seat 2</span></button>
+            <button id="seat-3" class="seat-btn" onclick="handleSeatClick(this)"><i class="fa-solid fa-chair"></i><span>Seat 3</span></button>
+            <button id="seat-4" class="seat-btn" onclick="handleSeatClick(this)"><i class="fa-solid fa-chair"></i><span>Seat 4</span></button>
+            <button id="seat-5" class="seat-btn" onclick="handleSeatClick(this)"><i class="fa-solid fa-chair"></i><span>Seat 5</span></button>
+            <button id="seat-6" class="seat-btn" onclick="handleSeatClick(this)"><i class="fa-solid fa-chair"></i><span>Seat 6</span></button>
+            <button id="seat-7" class="seat-btn" onclick="handleSeatClick(this)"><i class="fa-solid fa-chair"></i><span>Seat 7</span></button>
+            <button id="seat-8" class="seat-btn" onclick="handleSeatClick(this)"><i class="fa-solid fa-chair"></i><span>Seat 8</span></button>
+            <button id="seat-9" class="seat-btn" onclick="handleSeatClick(this)"><i class="fa-solid fa-chair"></i><span>Seat 9</span></button>
+            <button id="seat-10" class="seat-btn" onclick="handleSeatClick(this)"><i class="fa-solid fa-chair"></i><span>Seat 10</span></button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
