@@ -1,236 +1,552 @@
-const LIBRARY_OPEN_HOUR = 8;   
-const LIBRARY_CLOSE_HOUR = 17; 
-let currentFilterMode = 'all'; // গ্লোবাল ফিল্টার স্টেট
 
-// ১. লাইভ ডিজিটাল ঘড়ি চালুর ফাংশন
+const LIBRARY_OPEN_HOUR = 8;
+
+const LIBRARY_CLOSE_HOUR = 17;
+
+let selectedSeatId = null;
+
+let currentFilterMode = 'all';
+
+let cancelMode = false;
+
+
+// Elements
+
+const bookingModal = document.getElementById("bookingModal");
+
+const bookingBox = document.querySelector(".booking-box");
+
+const bookingMessage = document.getElementById("bookingMessage");
+
+
+// 1. Live Digital Clock
+
 function updateDigitalClock() {
-    let now = new Date();
+
+    const now = new Date();
+
     let hours = now.getHours();
-    let minutes = now.getMinutes();
-    let seconds = now.getSeconds();
-    let ampm = hours >= 12 ? 'PM' : 'AM';
-    
-    hours = hours % 12;
-    hours = hours ? hours : 12; 
-    minutes = minutes < 10 ? '0' + minutes : minutes;
-    seconds = seconds < 10 ? '0' + seconds : seconds;
-    
-    document.getElementById("liveClock").innerHTML = `<i class="fa-solid fa-circle-dot"></i> Live: ${hours}:${minutes}:${seconds} ${ampm}`;
-}
-setInterval(updateDigitalClock, 1000); 
 
-// ২. ডার্ক মোড থিম চেঞ্জ করার ফাংশন
+    let minutes = String(now.getMinutes()).padStart(2, "0");
+
+    let seconds = String(now.getSeconds()).padStart(2, "0");
+
+    const ampm = hours >= 12 ? "PM" : "AM";
+
+    hours = hours % 12 || 12;
+
+    document.getElementById("liveClock").textContent =
+        `Live: ${hours}:${minutes}:${seconds} ${ampm}`;
+
+}
+
+setInterval(updateDigitalClock, 1000);
+
+
+// 2. Dark Mode
+
 function toggleTheme() {
-    let body = document.body;
-    let themeBtn = document.getElementById("themeToggle");
-    
-    body.classList.toggle("dark-mode");
-    
-    if (body.classList.contains("dark-mode")) {
-        themeBtn.innerHTML = `<i class="fa-solid fa-sun"></i> Light Mode`;
+
+    document.body.classList.toggle("dark-mode");
+
+    const themeBtn = document.getElementById("themeToggle");
+
+    if (document.body.classList.contains("dark-mode")) {
+
+        themeBtn.innerHTML = '<i class="fa-solid fa-sun"></i> Light Mode';
+
         localStorage.setItem("theme", "dark");
+
     } else {
-        themeBtn.innerHTML = `<i class="fa-solid fa-moon"></i> Dark Mode`;
+
+        themeBtn.innerHTML = '<i class="fa-solid fa-moon"></i> Dark Mode';
+
         localStorage.setItem("theme", "light");
+
     }
+
 }
 
-// ৩. সিট ক্লিক লজিক
+
+// 3. Show Booking Popup
+
 function handleSeatClick(element) {
-    let nowTime = new Date();
-    let currentHour = nowTime.getHours();
+
+    selectedSeatId = element.id;
+
+    // Already booked seat
 
     if (element.classList.contains("booked")) {
-        let confirmCancel = confirm("আপনি কি এই সিটের বুকিং এখনই বাতিল করতে চান?");
-        if (confirmCancel) {
-            releaseSeat(element.id);
-        }
-        updateLiveCounter();
-        filterSeats(currentFilterMode); // ফিল্টার রি-অ্যাপ্লাই করা
-        return; 
-    }
 
-    if (currentHour < LIBRARY_OPEN_HOUR || currentHour >= LIBRARY_CLOSE_HOUR) {
-        alert("দুঃখিত! লাইব্রেরি এখন বন্ধ। লাইব্রেরি খোলা থাকে সকাল ৮:০০ টা থেকে বিকাল ৫:০০ টা পর্যন্ত।");
+        showCancelPopup();
+
         return;
+
     }
 
-    let nameInput = prompt("বুকিং করার জন্য আপনার নাম লিখুন:");
-    if (nameInput === null || nameInput.trim() === "") return; 
+    // Library time check
 
-    let idInput = prompt("আপনার আইডি নম্বর লিখুন:");
-    if (idInput === null || idInput.trim() === "") {
-        alert("বুকিং সম্পূর্ণ করতে আইডি নম্বর প্রয়োজন!");
+    let currentHour = new Date().getHours();
+
+    if (currentHour < LIBRARY_OPEN_HOUR ||
+        currentHour >= LIBRARY_CLOSE_HOUR) {
+
+        resetBookingForm();
+
+        bookingMessage.textContent = "Library is open from 8 AM to 5 PM.";
+
+        bookingModal.style.display = "flex";
+
         return;
+
     }
 
-    let timeInput = prompt("কোন সময় পর্যন্ত বুক করতে চান? (উদাহরণ: 04:30 PM অথবা 16:30)");
-    if (timeInput === null || timeInput.trim() === "") {
-        alert("দয়া করে একটি সঠিক সময় দিন!");
+    // Reset form
+
+    resetBookingForm();
+
+    bookingBox.querySelector("h2").textContent = "Book Your Seat";
+
+    // Show popup
+
+    bookingModal.style.display = "flex";
+
+}
+
+
+// 4. Reset Booking Form
+
+function resetBookingForm() {
+
+    document.getElementById("studentName").value = "";
+
+    document.getElementById("studentId").value = "";
+
+    document.getElementById("bookingTime").value = "";
+
+    bookingMessage.textContent = "";
+
+}
+
+
+// 5. Confirm Booking
+
+function confirmBooking() {
+
+    let name = document.getElementById("studentName").value.trim();
+
+    let id = document.getElementById("studentId").value.trim();
+
+    let time = document.getElementById("bookingTime").value;
+
+    let message = document.getElementById("bookingMessage");
+
+    if (!name || !id || !time) {
+
+        message.textContent = "Please fill all fields.";
+
         return;
+
     }
 
-    let expiryTime = parseTimeStringToDate(timeInput.trim());
-    if (!expiryTime) {
-        alert("সময়ের ফরম্যাটটি সঠিক নয়! দয়া করে '04:00 PM' অথবা '16:00' ফরম্যাটে লিখুন।");
+    let expiryTime = parseTimeStringToDate(time);
+
+    if (!expiryTime || expiryTime <= Date.now()) {
+
+        message.textContent = "Please select a future time.";
+
         return;
+
     }
 
-    let now = new Date().getTime();
-    if (expiryTime <= now) {
-        alert("আপনি যে সময়টি দিয়েছেন তা ইতিমধ্যে পার হয়ে গেছে! ভবিষ্যতের কোনো সময় দিন।");
+    let expiryDate = new Date(expiryTime);
+
+    if (expiryDate.getHours() > LIBRARY_CLOSE_HOUR ||
+        (expiryDate.getHours() === LIBRARY_CLOSE_HOUR &&
+         expiryDate.getMinutes() > 0)) {
+
+        message.textContent = "Booking cannot exceed 5 PM.";
+
         return;
+
     }
 
-    let expiryDateObject = new Date(expiryTime);
-    if (expiryDateObject.getHours() > LIBRARY_CLOSE_HOUR || (expiryDateObject.getHours() === LIBRARY_CLOSE_HOUR && expiryDateObject.getMinutes() > 0)) {
-        alert("দুঃখিত! আপনি লাইব্রেরি বন্ধের (বিকাল ৫:০০ টার) পরের সময় দিতে পারবেন না।");
+    let seat = document.getElementById(selectedSeatId);
+
+    if (!seat || seat.classList.contains("booked")) {
+
+        message.textContent = "Seat is not available.";
+
         return;
+
     }
 
-    let userName = nameInput.trim();
-    let userId = idInput.trim();
-    let displayTime = timeInput.trim().toUpperCase();
+    let bookingData = {
 
-    let seatBookingData = {
-        name: userName,
-        id: userId,
-        displayTime: displayTime,
+        name: name,
+
+        id: id,
+
+        displayTime: time,
+
         expiresAt: expiryTime
+
     };
 
-    localStorage.setItem(element.id, JSON.stringify(seatBookingData));
-    
-    element.classList.add("booked");
-    element.innerHTML = `<i class="fa-solid fa-user-lock"></i><span>${userName}<br>ID: ${userId}<br>Until ${displayTime}</span>`;
+    localStorage.setItem(
+        selectedSeatId,
+        JSON.stringify(bookingData)
+    );
 
-    let timeDifference = expiryTime - now;
-    startAutoReleaseTimer(element.id, timeDifference);
+    updateSeatDisplay(selectedSeatId, bookingData);
+
+    startAutoReleaseTimer(
+        selectedSeatId,
+        expiryTime - Date.now()
+    );
+
+    closeBookingModal();
+
     updateLiveCounter();
-    filterSeats(currentFilterMode); // ফিল্টার রি-অ্যাপ্লাই করা
+
+    filterSeats(currentFilterMode);
+
 }
+
+
+// 6. Convert Time
 
 function parseTimeStringToDate(timeStr) {
-    let now = new Date();
-    let hours = 0, minutes = 0;
-    
-    let is12Hour = /am|pm/i.test(timeStr);
-    let timeParts = timeStr.replace(/am|pm/i, '').trim().split(':');
-    if (timeParts.length < 1) return null;
-    
-    hours = parseInt(timeParts[0]);
-    minutes = timeParts[1] ? parseInt(timeParts[1]) : 0;
-    
-    if (isNaN(hours) || isNaN(minutes)) return null;
 
-    if (is12Hour) {
-        let isPM = /pm/i.test(timeStr);
-        if (isPM && hours < 12) hours += 12;
-        if (!isPM && hours === 12) hours = 0;
+    const parts = timeStr.split(":");
+
+    if (parts.length !== 2) return null;
+
+    const hours = Number(parts[0]);
+
+    const minutes = Number(parts[1]);
+
+    if (!Number.isInteger(hours) ||
+        !Number.isInteger(minutes) ||
+        hours < 0 || hours > 23 ||
+        minutes < 0 || minutes > 59) {
+
+        return null;
+
     }
 
-    let targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
+    const now = new Date();
+
+    const targetDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        hours,
+        minutes,
+        0,
+        0
+    );
+
     return targetDate.getTime();
+
 }
+
+
+// 7. Update Seat Display
+
+function updateSeatDisplay(seatId, booking) {
+
+    const seat = document.getElementById(seatId);
+
+    if (!seat) return;
+
+    seat.classList.add("booked");
+
+    seat.innerHTML = "";
+
+    const icon = document.createElement("i");
+
+    icon.className = "fa-solid fa-user-lock";
+
+    const span = document.createElement("span");
+
+    span.textContent =
+        `${booking.name} | ID: ${booking.id} | Until ${booking.displayTime}`;
+
+    seat.appendChild(icon);
+
+    seat.appendChild(span);
+
+}
+
+
+// 8. Cancel Booking Popup
+
+function showCancelPopup() {
+
+    cancelMode = true;
+
+    const fields = bookingBox.querySelectorAll("label, input");
+
+    const buttons = bookingBox.querySelectorAll("button");
+
+    fields.forEach(field => field.style.display = "none");
+
+    bookingBox.querySelector("h2").textContent = "Cancel Booking?";
+
+    bookingMessage.textContent =
+        "Do you want to cancel this seat booking?";
+
+    buttons[0].style.display = "none";
+
+    buttons[1].textContent = "Keep Booking";
+
+    buttons[1].onclick = closeBookingModal;
+
+    let confirmButton = document.getElementById("confirmCancelButton");
+
+    if (!confirmButton) {
+
+        confirmButton = document.createElement("button");
+
+        confirmButton.id = "confirmCancelButton";
+
+        confirmButton.textContent = "Yes, Cancel Booking";
+
+        bookingBox.appendChild(confirmButton);
+
+    }
+
+    confirmButton.style.display = "block";
+
+    confirmButton.onclick = function () {
+
+        releaseSeat(selectedSeatId);
+
+        closeBookingModal();
+
+        updateLiveCounter();
+
+        filterSeats(currentFilterMode);
+
+    };
+
+    bookingModal.style.display = "flex";
+
+}
+
+
+// 9. Close Popup
+
+function closeBookingModal() {
+
+    bookingModal.style.display = "none";
+
+    const fields = bookingBox.querySelectorAll("label, input");
+
+    fields.forEach(field => field.style.display = "block");
+
+    const buttons = bookingBox.querySelectorAll("button");
+
+    buttons[0].style.display = "block";
+
+    buttons[1].style.display = "block";
+
+    const confirmButton =
+        document.getElementById("confirmCancelButton");
+
+    if (confirmButton) {
+
+        confirmButton.style.display = "none";
+
+    }
+
+    bookingBox.querySelector("h2").textContent = "Book Your Seat";
+
+    bookingMessage.textContent = "";
+
+    buttons[0].textContent = "Book Seat";
+
+    buttons[0].onclick = confirmBooking;
+
+    buttons[1].textContent = "Cancel";
+
+    buttons[1].onclick = closeBookingModal;
+
+    cancelMode = false;
+
+    selectedSeatId = null;
+
+}
+
+
+// 10. Release Seat
 
 function releaseSeat(seatId) {
-    let element = document.getElementById(seatId);
-    element.classList.remove("booked"); 
-    
-    let seatNum = seatId.replace("seat-", "");
-    element.innerHTML = `<i class="fa-solid fa-chair"></i><span>Seat ${seatNum}</span>`;
-    
-    localStorage.removeItem(seatId); 
-    updateLiveCounter(); 
+
+    const seat = document.getElementById(seatId);
+
+    if (!seat) return;
+
+    seat.classList.remove("booked");
+
+    const seatNumber = seatId.replace("seat-", "");
+
+    seat.innerHTML =
+        `<i class="fa-solid fa-chair"></i><span>Seat ${seatNumber}</span>`;
+
+    localStorage.removeItem(seatId);
+
 }
 
-function startAutoReleaseTimer(seatId, delayInMs) {
+
+// 11. Automatic Booking Expiry
+
+function startAutoReleaseTimer(seatId, delay) {
+
     setTimeout(() => {
-        let savedData = localStorage.getItem(seatId);
-        if (savedData) {
-            let booking = JSON.parse(savedData);
-            let now = new Date().getTime();
-            
-            if (now >= booking.expiresAt) {
-                releaseSeat(seatId);
-                filterSeats(currentFilterMode);
-                alert(`Seat ${seatId.replace("seat-", "")} এর বুকিং সময় শেষ! সিটটি এখন খালি।`);
-            }
+
+        const savedData = localStorage.getItem(seatId);
+
+        if (!savedData) return;
+
+        const booking = JSON.parse(savedData);
+
+        if (Date.now() >= booking.expiresAt) {
+
+            releaseSeat(seatId);
+
+            updateLiveCounter();
+
+            filterSeats(currentFilterMode);
+
         }
-    }, delayInMs);
+
+    }, Math.max(0, delay));
+
 }
+
+
+// 12. Update Counters
 
 function updateLiveCounter() {
-    let totalSeats = 10; 
-    let currentlyBooked = document.querySelectorAll(".seat-btn.booked").length;
-    
-    document.getElementById("totalNum").innerText = totalSeats;
-    document.getElementById("bookedNum").innerText = currentlyBooked;
-    document.getElementById("freeNum").innerText = totalSeats - currentlyBooked;
+
+    const totalSeats = 10;
+
+    const bookedSeats =
+        document.querySelectorAll(".seat-btn.booked").length;
+
+    document.getElementById("totalNum").textContent = totalSeats;
+
+    document.getElementById("bookedNum").textContent = bookedSeats;
+
+    document.getElementById("freeNum").textContent =
+        totalSeats - bookedSeats;
+
 }
 
-// ৪. স্মার্ট আসন ফিল্টারিং ফাংশন (নতুন ফিচার)
+
+// 13. Filter Seats
+
 function filterSeats(type) {
+
     currentFilterMode = type;
-    let allSeats = document.querySelectorAll(".seat-btn");
-    
-    // সব ফিল্টার বাটনের অ্যাক্টিভ ক্লাস রিমুভ করা
-    document.querySelectorAll(".filter-btn").forEach(btn => btn.classList.remove("active"));
-    // সিলেক্টেড বাটনে অ্যাক্টিভ ক্লাস অ্যাড করা
-    document.getElementById(`filter-${type}`).classList.add("active");
+
+    const allSeats = document.querySelectorAll(".seat-btn");
+
+    ["all", "free", "booked"].forEach(filter => {
+
+        const button = document.getElementById(`filter-${filter}`);
+
+        if (button) {
+
+            button.classList.toggle("active", filter === type);
+
+        }
+
+    });
 
     allSeats.forEach(seat => {
-        if (type === 'all') {
+
+        if (type === "all") {
+
             seat.classList.remove("hidden");
-        } else if (type === 'free') {
-            if (seat.classList.contains("booked")) {
-                seat.classList.add("hidden");
-            } else {
-                seat.classList.remove("hidden");
-            }
-        } else if (type === 'booked') {
-            if (!seat.classList.contains("booked")) {
-                seat.classList.add("hidden");
-            } else {
-                seat.classList.remove("hidden");
-            }
+
         }
+
+        else if (type === "free") {
+
+            seat.classList.toggle("hidden",
+                seat.classList.contains("booked"));
+
+        }
+
+        else if (type === "booked") {
+
+            seat.classList.toggle("hidden",
+                !seat.classList.contains("booked"));
+
+        }
+
     });
+
 }
 
-// ৫. উইন্ডো লোড
-window.onload = function() {
+
+// 14. Load Saved Data
+
+window.onload = function () {
+
     updateDigitalClock();
-    
-    // সংরক্ষিত থিম লোড করা
-    let savedTheme = localStorage.getItem("theme");
+
+    const savedTheme = localStorage.getItem("theme");
+
     if (savedTheme === "dark") {
+
         document.body.classList.add("dark-mode");
-        document.getElementById("themeToggle").innerHTML = `<i class="fa-solid fa-sun"></i> Light Mode`;
+
+        document.getElementById("themeToggle").innerHTML =
+            '<i class="fa-solid fa-sun"></i> Light Mode';
+
     }
 
-    let allSeats = document.querySelectorAll(".seat-btn");
-    let now = new Date().getTime();
-    
-    allSeats.forEach(seat => {
-        let savedData = localStorage.getItem(seat.id);
+    document.querySelectorAll(".seat-btn").forEach(seat => {
+
+        const savedData = localStorage.getItem(seat.id);
+
         if (savedData) {
+
             try {
-                let booking = JSON.parse(savedData);
-                
-                if (now >= booking.expiresAt) {
+
+                const booking = JSON.parse(savedData);
+
+                if (Date.now() >= booking.expiresAt) {
+
                     localStorage.removeItem(seat.id);
+
                 } else {
-                    seat.classList.add("booked");
-                    seat.innerHTML = `<i class="fa-solid fa-user-lock"></i><span>${booking.name}<br>ID: ${booking.id}<br>Until ${booking.displayTime}</span>`;
-                    
-                    let remainingTime = booking.expiresAt - now;
-                    startAutoReleaseTimer(seat.id, remainingTime);
+
+                    updateSeatDisplay(seat.id, booking);
+
+                    startAutoReleaseTimer(
+                        seat.id,
+                        booking.expiresAt - Date.now()
+                    );
+
                 }
-            } catch (e) {
+
+            } catch (error) {
+
                 localStorage.removeItem(seat.id);
+
             }
+
         }
+
     });
+
     updateLiveCounter();
+
+    filterSeats("all");
+
 };
